@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社長個人の手残り比較シミュレーター</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans JP', 'Inter', sans-serif;
+        }
+        .result-card {
+            transition: all 0.5s ease-in-out;
+            opacity: 0;
+            transform: translateY(20px);
+            max-height: 0;
+            overflow: hidden;
+        }
+        .result-card.show {
+            opacity: 1;
+            transform: translateY(0);
+            max-height: 5000px;
+        }
+        .calc-row {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 0.25rem;
+            padding-bottom: 0.25rem;
+        }
+        .calc-row.total {
+            border-top-width: 2px;
+            border-color: #9ca3af;
+            font-weight: bold;
+            font-size: 1.125rem;
+            line-height: 1.75rem;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+        }
+        .details-toggle {
+            cursor: pointer;
+            font-size: 0.75rem;
+            color: #4b5563;
+            padding: 0.25rem;
+            display: block;
+            text-align: right;
+        }
+        .details-content {
+             max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out, padding 0.5s ease-out;
+            padding-top: 0;
+            padding-bottom: 0;
+            font-size: 0.75rem;
+            background-color: #e5e7eb;
+            border-radius: 0.25rem;
+        }
+        .details-content.show {
+            max-height: 500px;
+            padding: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <header class="bg-slate-800 text-white py-12 px-4">
+        <div class="container mx-auto text-center max-w-4xl">
+            <h1 class="text-3xl md:text-4xl font-bold mb-4 leading-tight">社長個人の手残り比較シミュレーター</h1>
+            <p class="text-lg md:text-xl text-slate-300">「通常の役員社宅」と「社長の家探し」フル活用プランを比較し、最終的な手取り額の変化を可視化します。</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8">
+        
+        <section id="simulator" class="bg-white p-6 md:p-8 rounded-2xl shadow-lg max-w-4xl mx-auto">
+            <h3 class="text-xl md:text-2xl font-bold mb-6 text-center text-slate-900">シミュレーション条件を入力</h3>
+            
+             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
+                <div>
+                    <label for="compensation-input" class="block text-sm font-medium text-slate-700 mb-2">役員報酬（月額）</label>
+                    <input type="text" id="compensation-input" value="1,000,000" class="w-full text-right bg-slate-100 rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" inputmode="numeric">
+                </div>
+                <div>
+                    <label for="rent-input" class="block text-sm font-medium text-slate-700 mb-2">家賃（月額）</label>
+                    <input type="text" id="rent-input" value="500,000" class="w-full text-right bg-slate-100 rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" inputmode="numeric">
+                </div>
+                <div>
+                    <label for="personal-burden-input" class="block text-sm font-medium text-slate-700 mb-2">個人負担家賃（月額）</label>
+                    <input type="text" id="personal-burden-input" value="50,000" class="w-full text-right bg-slate-100 rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" inputmode="numeric">
+                </div>
+                 <div>
+                    <label for="utility-input" class="block text-sm font-medium text-slate-700 mb-2">水道光熱費（月額）</label>
+                    <input type="text" id="utility-input" value="30,000" class="w-full text-right bg-slate-100 rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" inputmode="numeric">
+                </div>
+                <div>
+                    <label for="service-fee-input" class="block text-sm font-medium text-slate-700 mb-2">弊社サービス料（対元家賃, %）</label>
+                    <input type="text" id="service-fee-input" value="20" class="w-full text-right bg-slate-100 rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" inputmode="numeric">
+                </div>
+                 <div>
+                    <label for="key-money-input" class="block text-sm font-medium text-slate-700 mb-2">礼金（対新家賃, ヶ月分）</label>
+                    <input type="text" id="key-money-input" value="6" class="w-full text-right bg-slate-100 rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" inputmode="numeric">
+                </div>
+            </div>
+
+            <div class="mt-8 text-center">
+                <button id="calculate-btn" class="bg-blue-600 text-white font-bold py-3 px-10 rounded-lg hover:bg-blue-700 transition duration-300 text-lg shadow-md hover:shadow-lg">
+                    手取り額を比較する
+                </button>
+            </div>
+        </section>
+
+        <section id="results" class="mt-12 max-w-5xl mx-auto result-card">
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-lg">
+                <h3 class="text-2xl md:text-3xl font-bold mb-6 text-center text-slate-900">シミュレーション結果</h3>
+                
+                <!-- 1 Year Results -->
+                <div class="mb-12">
+                    <h4 class="text-xl font-bold mb-4 text-center text-slate-700 border-b-2 pb-2">1年間の比較</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div id="s-results-1y" class="bg-slate-100 p-6 rounded-lg"></div>
+                        <div id="gp-results-1y" class="bg-blue-50 p-6 rounded-lg border-2 border-blue-500"></div>
+                    </div>
+                    <div class="text-center mt-8 bg-green-50 border-l-4 border-green-500 p-6 rounded-lg">
+                        <p class="text-lg text-slate-700">1年間の手取り増加額</p>
+                        <p class="text-3xl md:text-4xl font-bold text-green-600 my-3" id="take-home-difference-1y">0 円</p>
+                    </div>
+                </div>
+
+                <!-- 2 Year Results -->
+                <div>
+                    <h4 class="text-xl font-bold mb-4 text-center text-slate-700 border-b-2 pb-2">2年間の比較</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div id="s-results-2y" class="bg-slate-100 p-6 rounded-lg"></div>
+                        <div id="gp-results-2y" class="bg-blue-50 p-6 rounded-lg border-2 border-blue-500"></div>
+                    </div>
+                    <div class="text-center mt-8 bg-green-50 border-l-4 border-green-500 p-6 rounded-lg">
+                        <p class="text-lg text-slate-700">2年間の手取り増加額</p>
+                        <p class="text-3xl md:text-4xl font-bold text-green-600 my-3" id="take-home-difference-2y">0 円</p>
+                    </div>
+                </div>
+                 <!-- Corporate Benefit -->
+                <div class="mt-12">
+                    <h4 class="text-xl font-bold mb-4 text-center text-slate-700 border-b-2 pb-2">法人のメリット</h4>
+                     <div class="text-center mt-8 bg-indigo-50 border-l-4 border-indigo-500 p-6 rounded-lg">
+                        <p class="text-lg text-slate-700">「社長の家探し」を活用することで、法人が負担する社会保険料も...</p>
+                        <p class="text-3xl md:text-4xl font-bold text-indigo-600 my-3">2年間で <span id="corporate-benefit">0</span> 円</p>
+                        <p class="text-slate-600">削減されます！</p>
+                        <div class="text-right mt-2">
+                           <span class="details-toggle">計算の内訳</span>
+                           <div class="details-content text-left"><p id="corporate-benefit-details"></p></div>
+                        </div>
+                    </div>
+                </div>
+                 <div class="mt-12 text-center text-sm text-slate-500">
+                    <p>※本シミュレーションは概算です。正確な金額は個別の状況により変動します。具体的な費用計上については、必ず顧問税理士にご確認ください。</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+    
+    <footer class="bg-slate-800 text-white mt-16 py-8">
+        <div class="container mx-auto text-center text-sm">
+            <p class="mb-2">株式会社グロースプロパティ</p>
+            <p>本シミュレーションに関するご相談・お問い合わせは担当者までご連絡ください。</p>
+        </div>
+    </footer>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Constants and Assumptions ---
+        const SOCIAL_INSURANCE_RATE_PERSONAL = 0.15;
+        const SOCIAL_INSURANCE_RATE_CORPORATE = 0.15;
+        const RESIDENT_TAX_RATE = 0.10;
+        const BASIC_DEDUCTION = 480000;
+        
+        // --- DOM Elements ---
+        const compensationInput = document.getElementById('compensation-input');
+        const rentInput = document.getElementById('rent-input');
+        const personalBurdenInput = document.getElementById('personal-burden-input');
+        const utilityInput = document.getElementById('utility-input');
+        const serviceFeeInput = document.getElementById('service-fee-input');
+        const keyMoneyInput = document.getElementById('key-money-input');
+        const calculateBtn = document.getElementById('calculate-btn');
+        const resultsSection = document.getElementById('results');
+
+        // --- Utility Functions ---
+        const formatCurrency = (num) => new Intl.NumberFormat('ja-JP').format(Math.round(num));
+        const parseCurrency = (str) => {
+            const parsed = parseFloat(String(str).replace(/,/g, ''));
+            return isNaN(parsed) ? 0 : parsed;
+        };
+
+        // --- Calculation Helper Functions ---
+        function calculateSalaryIncomeDeduction(annualIncome) {
+            if (annualIncome <= 1625000) return 550000;
+            if (annualIncome <= 1800000) return annualIncome * 0.4 - 100000;
+            if (annualIncome <= 3600000) return annualIncome * 0.3 + 80000;
+            if (annualIncome <= 6600000) return annualIncome * 0.2 + 440000;
+            if (annualIncome <= 8500000) return annualIncome * 0.1 + 1100000;
+            return 1950000;
+        }
+
+        function calculateIncomeTax(taxableIncome) {
+            let tax = 0, deduction = 0;
+            if (taxableIncome <= 1950000) { tax = taxableIncome * 0.05; deduction = 0; }
+            else if (taxableIncome <= 3300000) { tax = taxableIncome * 0.10; deduction = 97500; }
+            else if (taxableIncome <= 6950000) { tax = taxableIncome * 0.20; deduction = 427500; }
+            else if (taxableIncome <= 9000000) { tax = taxableIncome * 0.23; deduction = 636000; }
+            else if (taxableIncome <= 18000000) { tax = taxableIncome * 0.33; deduction = 1536000; }
+            else if (taxableIncome <= 40000000) { tax = taxableIncome * 0.40; deduction = 2796000; }
+            else { tax = taxableIncome * 0.45; deduction = 4796000; }
+            const calculatedTax = tax - deduction;
+            const finalTax = calculatedTax * 1.021;
+            return finalTax > 0 ? finalTax : 0;
+        }
+        
+        function calculateTaxableIncome(annualCompensation, socialInsuranceDeduction) {
+            const salaryIncomeDeduction = calculateSalaryIncomeDeduction(annualCompensation);
+            const taxableIncome = annualCompensation - salaryIncomeDeduction - socialInsuranceDeduction - BASIC_DEDUCTION;
+            return taxableIncome > 0 ? taxableIncome : 0;
+        }
+        
+        function updateDetails(elementId, content) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = content;
+            }
+        }
+
+        function generateResultHTML(prefix, periodInYears) {
+            const periodText = periodInYears === 1 ? '年間' : `${periodInYears}年間`;
+            return `
+                <h4 class="text-xl font-bold text-center mb-4">${prefix === 's' ? '通常の役員社宅' : '「社長の家探し」活用'}</h4>
+                <div class="space-y-1 text-sm">
+                    <div class="calc-row"><span>総報酬（${periodText}）</span><span id="${prefix}-income-${periodInYears}y">0円</span></div>
+                    <span class="details-toggle">内訳を表示</span><div class="details-content"><p id="${prefix}-income-details-${periodInYears}y"></p></div>
+                    
+                    <div class="calc-row border-t pt-2"><span>(-) 会社負担費用</span><span id="${prefix}-comp-deduction-${periodInYears}y">0円</span></div>
+                    <span class="details-toggle">内訳を表示</span><div class="details-content" id="${prefix}-comp-deduction-details-${periodInYears}y"></div>
+
+                    <div class="calc-row font-bold"><span>(=) 役員報酬（課税対象）</span><span id="${prefix}-new-comp-${periodInYears}y">0円</span></div>
+                    <span class="details-toggle">内訳を表示</span><div class="details-content"><p id="${prefix}-new-comp-details-${periodInYears}y"></p></div>
+
+                    <div class="calc-row border-t pt-2"><span>(-) 社会保険料</span><span id="${prefix}-social-deduction-${periodInYears}y">0円</span></div>
+                    <span class="details-toggle">内訳を表示</span><div class="details-content"><p id="${prefix}-social-deduction-details-${periodInYears}y"></p></div>
+
+                    <div class="calc-row"><span>(-) 所得税・住民税</span><span id="${prefix}-tax-${periodInYears}y">0円</span></div>
+                    <span class="details-toggle">内訳を表示</span><div class="details-content"><p id="${prefix}-tax-details-${periodInYears}y"></p></div>
+
+                    <div class="calc-row font-bold"><span>(=) 税引後手取り</span><span id="${prefix}-take-home-after-tax-${periodInYears}y">0円</span></div>
+                    <span class="details-toggle">内訳を表示</span><div class="details-content"><p id="${prefix}-take-home-after-tax-details-${periodInYears}y"></p></div>
+
+                    <div class="calc-row border-t pt-2"><span>(-) 個人負担家賃</span><span id="${prefix}-rent-burden-${periodInYears}y">0円</span></div>
+                    <span class="details-toggle">内訳を表示</span><div class="details-content"><p id="${prefix}-rent-burden-details-${periodInYears}y"></p></div>
+
+                    <div class="calc-row ${prefix === 'gp' ? 'text-slate-400' : ''}"><span>(-) 水道光熱費</span><span id="${prefix}-utility-burden-${periodInYears}y">0円</span></div>
+                     ${prefix === 's' ? `<span class="details-toggle">内訳を表示</span><div class="details-content"><p id="s-utility-burden-details-${periodInYears}y"></p></div>` : ''}
+
+                    <div class="calc-row ${prefix === 'gp' ? 'text-slate-400' : ''}"><span>(-) 家具家電代（礼金相当）</span><span id="${prefix}-key-money-burden-${periodInYears}y">0円</span></div>
+                     ${prefix === 's' ? `<span class="details-toggle">内訳を表示</span><div class="details-content"><p id="s-key-money-burden-details-${periodInYears}y"></p></div>` : ''}
+
+                    <div class="calc-row total"><span>(=) 最終的な手残り</span><span id="${prefix}-final-take-home-${periodInYears}y" class="text-blue-600">0円</span></div>
+                </div>
+            `;
+        }
+
+        // --- Main Calculation ---
+        calculateBtn.addEventListener('click', () => {
+            // Inject HTML structure
+            document.getElementById('s-results-1y').innerHTML = generateResultHTML('s', 1);
+            document.getElementById('gp-results-1y').innerHTML = generateResultHTML('gp', 1);
+            document.getElementById('s-results-2y').innerHTML = generateResultHTML('s', 2);
+            document.getElementById('gp-results-2y').innerHTML = generateResultHTML('gp', 2);
+
+            const monthlyCompensation = parseCurrency(compensationInput.value);
+            const monthlyRent = parseCurrency(rentInput.value);
+            const personalBurdenMonthly = parseCurrency(personalBurdenInput.value);
+            const utilityCostMonthly = parseCurrency(utilityInput.value);
+            const gpServiceFeeRate = parseFloat(serviceFeeInput.value) / 100;
+            const keyMoneyMonths = parseFloat(keyMoneyInput.value);
+
+            const gpServiceFee = monthlyRent * gpServiceFeeRate;
+            const newTotalMonthlyRent = monthlyRent + gpServiceFee + utilityCostMonthly;
+            const totalKeyMoney = newTotalMonthlyRent * keyMoneyMonths;
+
+            let s_final_1y, gp_final_1y, s_final_2y, gp_final_2y;
+            let s_newComp2y, gp_newComp2y;
+
+            [1, 2].forEach(years => {
+                const totalCompensation = monthlyCompensation * 12 * years;
+
+                // --- Case 1: Standard Housing ---
+                const s_companyRentBurden = (monthlyRent - personalBurdenMonthly) * 12 * years;
+                const s_newComp = totalCompensation - s_companyRentBurden;
+                const s_socialInsuranceDeduction = s_newComp * SOCIAL_INSURANCE_RATE_PERSONAL;
+                const s_taxableIncome = calculateTaxableIncome(s_newComp / years, s_socialInsuranceDeduction / years) * years;
+                const s_incomeTax = calculateIncomeTax(s_taxableIncome / years) * years;
+                const s_residentTax = s_taxableIncome * RESIDENT_TAX_RATE;
+                const s_totalTax = s_incomeTax + s_residentTax;
+                const s_takeHomeAfterTax = s_newComp - s_socialInsuranceDeduction - s_totalTax;
+                const s_utilityBurden = utilityCostMonthly * 12 * years;
+                const s_keyMoneyBurden = totalKeyMoney;
+                let s_finalTakeHome;
+                if (years === 1) {
+                    s_finalTakeHome = s_takeHomeAfterTax - (personalBurdenMonthly * 12) - s_utilityBurden - (s_keyMoneyBurden / 2);
+                    s_final_1y = s_finalTakeHome;
+                } else {
+                    s_finalTakeHome = s_takeHomeAfterTax - (personalBurdenMonthly * 24) - s_utilityBurden - s_keyMoneyBurden;
+                    s_final_2y = s_finalTakeHome;
+                    s_newComp2y = s_newComp;
+                }
+
+                // --- Case 2: Growth Property ---
+                const gp_companyRentBurden = (monthlyRent + gpServiceFee - personalBurdenMonthly) * 12 * years;
+                const gp_companyUtilityBurden = utilityCostMonthly * 12 * years;
+                const gp_companyKeyMoneyBurden = totalKeyMoney;
+                let gp_totalCompDeduction;
+                if (years === 1) {
+                    gp_totalCompDeduction = gp_companyRentBurden + gp_companyUtilityBurden + (gp_companyKeyMoneyBurden / 2);
+                } else {
+                    gp_totalCompDeduction = gp_companyRentBurden + gp_companyUtilityBurden + gp_companyKeyMoneyBurden;
+                }
+
+                const gp_newComp = totalCompensation - gp_totalCompDeduction;
+                const gp_socialInsuranceDeduction = gp_newComp * SOCIAL_INSURANCE_RATE_PERSONAL;
+                const gp_taxableIncome = calculateTaxableIncome(gp_newComp / years, gp_socialInsuranceDeduction / years) * years;
+                const gp_incomeTax = calculateIncomeTax(gp_taxableIncome / years) * years;
+                const gp_residentTax = gp_taxableIncome * RESIDENT_TAX_RATE;
+                const gp_totalTax = gp_incomeTax + gp_residentTax;
+                const gp_takeHomeAfterTax = gp_newComp - gp_socialInsuranceDeduction - gp_totalTax;
+                const gp_finalTakeHome = gp_takeHomeAfterTax - (personalBurdenMonthly * 12 * years);
+                if (years === 1) gp_final_1y = gp_finalTakeHome;
+                if (years === 2) {
+                    gp_final_2y = gp_finalTakeHome;
+                    gp_newComp2y = gp_newComp;
+                }
+                
+                // Update DOM for the current period
+                document.getElementById(`s-income-${years}y`).textContent = formatCurrency(totalCompensation) + '円';
+                document.getElementById(`s-comp-deduction-${years}y`).textContent = formatCurrency(s_companyRentBurden) + '円';
+                document.getElementById(`s-new-comp-${years}y`).textContent = formatCurrency(s_newComp) + '円';
+                document.getElementById(`s-social-deduction-${years}y`).textContent = formatCurrency(s_socialInsuranceDeduction) + '円';
+                document.getElementById(`s-tax-${years}y`).textContent = formatCurrency(s_totalTax) + '円';
+                document.getElementById(`s-take-home-after-tax-${years}y`).textContent = formatCurrency(s_takeHomeAfterTax) + '円';
+                document.getElementById(`s-rent-burden-${years}y`).textContent = formatCurrency(personalBurdenMonthly * 12 * years) + '円';
+                document.getElementById(`s-utility-burden-${years}y`).textContent = formatCurrency(s_utilityBurden) + '円';
+                document.getElementById(`s-key-money-burden-${years}y`).textContent = formatCurrency(years === 1 ? s_keyMoneyBurden / 2 : s_keyMoneyBurden) + '円';
+                document.getElementById(`s-final-take-home-${years}y`).textContent = formatCurrency(s_finalTakeHome) + '円';
+
+                document.getElementById(`gp-income-${years}y`).textContent = formatCurrency(totalCompensation) + '円';
+                document.getElementById(`gp-comp-deduction-${years}y`).textContent = formatCurrency(gp_totalCompDeduction) + '円';
+                document.getElementById(`gp-new-comp-${years}y`).textContent = formatCurrency(gp_newComp) + '円';
+                document.getElementById(`gp-social-deduction-${years}y`).textContent = formatCurrency(gp_socialInsuranceDeduction) + '円';
+                document.getElementById(`gp-tax-${years}y`).textContent = formatCurrency(gp_totalTax) + '円';
+                document.getElementById(`gp-take-home-after-tax-${years}y`).textContent = formatCurrency(gp_takeHomeAfterTax) + '円';
+                document.getElementById(`gp-rent-burden-${years}y`).textContent = formatCurrency(personalBurdenMonthly * 12 * years) + '円';
+                document.getElementById(`gp-final-take-home-${years}y`).textContent = formatCurrency(gp_finalTakeHome) + '円';
+
+                // Update details
+                updateDetails(`s-income-details-${years}y`, `${formatCurrency(monthlyCompensation)}円 × ${12 * years}ヶ月`);
+                updateDetails(`s-comp-deduction-details-${years}y`, `(${formatCurrency(monthlyRent)}円 - ${formatCurrency(personalBurdenMonthly)}円) × ${12 * years}ヶ月`);
+                updateDetails(`s-new-comp-details-${years}y`, `${formatCurrency(totalCompensation)}円 - ${formatCurrency(s_companyRentBurden)}円`);
+                updateDetails(`s-social-deduction-details-${years}y`, `${formatCurrency(s_newComp)}円 × ${SOCIAL_INSURANCE_RATE_PERSONAL * 100}%`);
+                updateDetails(`s-tax-details-${years}y`, `所得税 ${formatCurrency(s_incomeTax)}円 + 住民税 ${formatCurrency(s_residentTax)}円`);
+                updateDetails(`s-take-home-after-tax-details-${years}y`, `${formatCurrency(s_newComp)}円 - ${formatCurrency(s_socialInsuranceDeduction)}円 - ${formatCurrency(s_totalTax)}円`);
+                updateDetails(`s-rent-burden-details-${years}y`, `${formatCurrency(personalBurdenMonthly)}円 × ${12 * years}ヶ月`);
+                updateDetails(`s-utility-burden-details-${years}y`, `${formatCurrency(utilityCostMonthly)}円 × ${12 * years}ヶ月`);
+                updateDetails(`s-key-money-burden-details-${years}y`, `新家賃 ${formatCurrency(newTotalMonthlyRent)}円 × ${keyMoneyMonths}ヶ月` + (years === 1 ? ' ÷ 2年' : ''));
+                
+                updateDetails(`gp-income-details-${years}y`, `${formatCurrency(monthlyCompensation)}円 × ${12*years}ヶ月`);
+                document.getElementById(`gp-comp-deduction-details-${years}y`).innerHTML = `
+                    <div class="calc-row"><span>会社負担家賃:</span><span>${formatCurrency(gp_companyRentBurden)}円</span></div>
+                    <div class="calc-row text-xs"><span>(${formatCurrency(monthlyRent)}円 + ${formatCurrency(gpServiceFee)}円 (サービス料) - ${formatCurrency(personalBurdenMonthly)}円) × ${12*years}ヶ月</span></div>
+                    <div class="calc-row"><span>水道光熱費:</span><span>${formatCurrency(gp_companyUtilityBurden)}円</span></div>
+                    <div class="calc-row"><span>礼金(家具家電):</span><span>${formatCurrency(years === 1 ? gp_companyKeyMoneyBurden / 2 : gp_companyKeyMoneyBurden)}円</span></div>
+                `;
+                
+                updateDetails(`gp-new-comp-details-${years}y`, `${formatCurrency(totalCompensation)}円 - ${formatCurrency(gp_totalCompDeduction)}円`);
+                updateDetails(`gp-social-deduction-details-${years}y`, `${formatCurrency(gp_newComp)}円 × ${SOCIAL_INSURANCE_RATE_PERSONAL * 100}%`);
+                updateDetails(`gp-tax-details-${years}y`, `所得税 ${formatCurrency(gp_incomeTax)}円 + 住民税 ${formatCurrency(gp_residentTax)}円`);
+                updateDetails(`gp-take-home-after-tax-details-${years}y`, `${formatCurrency(gp_newComp)}円 - ${formatCurrency(gp_socialInsuranceDeduction)}円 - ${formatCurrency(gp_totalTax)}円`);
+                updateDetails(`gp-rent-burden-details-${years}y`, `${formatCurrency(personalBurdenMonthly)}円 × ${12 * years}ヶ月`);
+            });
+
+            document.getElementById('take-home-difference-1y').textContent = formatCurrency(gp_final_1y - s_final_1y);
+            document.getElementById('take-home-difference-2y').textContent = formatCurrency(gp_final_2y - s_final_2y);
+            
+            const corporateBenefit = (s_newComp2y * SOCIAL_INSURANCE_RATE_CORPORATE) - (gp_newComp2y * SOCIAL_INSURANCE_RATE_CORPORATE);
+            document.getElementById('corporate-benefit').textContent = formatCurrency(corporateBenefit);
+            updateDetails('corporate-benefit-details', `<strong>通常社宅の法人負担 (2年):</strong> ${formatCurrency(s_newComp2y)}円 × ${SOCIAL_INSURANCE_RATE_CORPORATE * 100}% = ${formatCurrency(s_newComp2y * SOCIAL_INSURANCE_RATE_CORPORATE)}円<br>
+                                                       <strong>弊社プランの法人負担 (2年):</strong> ${formatCurrency(gp_newComp2y)}円 × ${SOCIAL_INSURANCE_RATE_CORPORATE * 100}% = ${formatCurrency(gp_newComp2y * SOCIAL_INSURANCE_RATE_CORPORATE)}円<br>
+                                                       <strong>差額:</strong> ${formatCurrency(corporateBenefit)}円`);
+
+            
+            resultsSection.classList.add('show');
+        });
+        
+        document.body.addEventListener('click', function(e) {
+            if (e.target.classList.contains('details-toggle')) {
+                const detailsContent = e.target.nextElementSibling;
+                detailsContent.classList.toggle('show');
+            }
+        });
+    });
+</script>
+</body>
+</html>
