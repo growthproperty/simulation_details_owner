@@ -151,7 +151,19 @@
                         </div>
                     </div>
                 </div>
-                 <div class="mt-12 text-center text-sm text-slate-500">
+                <!-- Total Benefit -->
+                <div class="mt-12">
+                    <h4 class="text-xl font-bold mb-4 text-center text-slate-700 border-b-2 pb-2">法人・個人トータルメリット</h4>
+                     <div class="text-center mt-8 bg-amber-50 border-l-4 border-amber-500 p-6 rounded-lg">
+                        <p class="text-lg text-slate-700">「社長の家探し」を活用することで、法人・個人を合わせたトータルのキャッシュフロー改善効果は...</p>
+                        <p class="text-3xl md:text-4xl font-bold text-amber-600 my-3">2年間で <span id="total-benefit-final">0</span> 円</p>
+                        <div class="text-right mt-2">
+                           <span class="details-toggle">計算の内訳</span>
+                           <div class="details-content text-left"><p id="total-benefit-details"></p></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-12 text-center text-xs text-slate-500">
                     <p>※本シミュレーションは概算です。正確な金額は個別の状況により変動します。具体的な費用計上については、必ず顧問税理士にご確認ください。</p>
                 </div>
             </div>
@@ -391,6 +403,10 @@
             updateDetails('corporate-benefit-details', `<strong>通常社宅の法人負担 (2年):</strong> ${formatCurrency(s_newComp2y)}円 × ${SOCIAL_INSURANCE_RATE_CORPORATE * 100}% = ${formatCurrency(s_newComp2y * SOCIAL_INSURANCE_RATE_CORPORATE)}円<br>
                                                        <strong>弊社プランの法人負担 (2年):</strong> ${formatCurrency(gp_newComp2y)}円 × ${SOCIAL_INSURANCE_RATE_CORPORATE * 100}% = ${formatCurrency(gp_newComp2y * SOCIAL_INSURANCE_RATE_CORPORATE)}円<br>
                                                        <strong>差額:</strong> ${formatCurrency(corporateBenefit)}円`);
+            
+            const totalBenefitFinal = (gp_final_2y - s_final_2y) + corporateBenefit;
+            document.getElementById('total-benefit-final').textContent = formatCurrency(totalBenefitFinal);
+            updateDetails('total-benefit-details', `個人の手取り増加額 (${formatCurrency(gp_final_2y - s_final_2y)}円) + 法人の社会保険料削減額 (${formatCurrency(corporateBenefit)}円)`);
 
             
             resultsSection.classList.add('show');
