@@ -142,9 +142,9 @@
                 <div class="mt-12">
                     <h4 class="text-xl font-bold mb-4 text-center text-slate-700 border-b-2 pb-2">法人のメリット</h4>
                      <div class="text-center mt-8 bg-indigo-50 border-l-4 border-indigo-500 p-6 rounded-lg">
-                        <p class="text-lg text-slate-700">「社長の家探し」を活用することで、法人が負担する社会保険料も...</p>
+                        <p class="text-lg text-slate-700">「社長の家探し」を活用することで、法人のキャッシュフローも改善します</p>
                         <p class="text-3xl md:text-4xl font-bold text-indigo-600 my-3">2年間で <span id="corporate-benefit">0</span> 円</p>
-                        <p class="text-slate-600">削減されます！</p>
+                        <p class="text-slate-600">改善されます！</p>
                         <div class="text-right mt-2">
                            <span class="details-toggle">計算の内訳</span>
                            <div class="details-content text-left"><p id="corporate-benefit-details"></p></div>
@@ -183,8 +183,10 @@
         // --- Constants and Assumptions ---
         const SOCIAL_INSURANCE_RATE_PERSONAL = 0.15;
         const SOCIAL_INSURANCE_RATE_CORPORATE = 0.15;
+        const MINIMUM_ANNUAL_SOCIAL_INSURANCE = 180000; // Approx 15,000/month * 12
         const RESIDENT_TAX_RATE = 0.10;
         const BASIC_DEDUCTION = 480000;
+        const CORPORATE_TAX_RATE = 0.30;
         
         // --- DOM Elements ---
         const compensationInput = document.getElementById('compensation-input');
@@ -204,6 +206,25 @@
         };
 
         // --- Calculation Helper Functions ---
+        function calculateAnnualSocialInsurance(annualCompensation, rate) {
+            const calculatedPremium = annualCompensation * rate;
+            let detail;
+            let premium;
+
+            if (annualCompensation > 0 && calculatedPremium < MINIMUM_ANNUAL_SOCIAL_INSURANCE) {
+                premium = MINIMUM_ANNUAL_SOCIAL_INSURANCE;
+                detail = `役員報酬額から計算した保険料が最低額を下回るため、最低保険料 (${formatCurrency(MINIMUM_ANNUAL_SOCIAL_INSURANCE)}円/年) を適用`;
+            } else if (annualCompensation <= 0) {
+                premium = 0;
+                detail = "役員報酬がないため、保険料は0円です";
+            } else {
+                premium = calculatedPremium;
+                detail = `${formatCurrency(annualCompensation)}円 × ${rate * 100}%`;
+            }
+            
+            return { premium, detail };
+        }
+
         function calculateSalaryIncomeDeduction(annualIncome) {
             if (annualIncome <= 1625000) return 550000;
             if (annualIncome <= 1800000) return annualIncome * 0.4 - 100000;
@@ -293,6 +314,7 @@
             const keyMoneyMonths = parseFloat(keyMoneyInput.value);
 
             const gpServiceFee = monthlyRent * gpServiceFeeRate;
+            // Corrected newTotalMonthlyRent calculation
             const newTotalMonthlyRent = monthlyRent + gpServiceFee + utilityCostMonthly;
             const totalKeyMoney = newTotalMonthlyRent * keyMoneyMonths;
 
@@ -305,7 +327,11 @@
                 // --- Case 1: Standard Housing ---
                 const s_companyRentBurden = (monthlyRent - personalBurdenMonthly) * 12 * years;
                 const s_newComp = totalCompensation - s_companyRentBurden;
-                const s_socialInsuranceDeduction = s_newComp * SOCIAL_INSURANCE_RATE_PERSONAL;
+                const s_socialResult = calculateAnnualSocialInsurance(s_newComp, SOCIAL_INSURANCE_RATE_PERSONAL);
+                let s_socialInsuranceDeduction = s_socialResult.premium;
+                if(years === 1) s_socialInsuranceDeduction /= 2;
+                if(years === 2) s_socialInsuranceDeduction = calculateAnnualSocialInsurance(s_newComp / 2, SOCIAL_INSURANCE_RATE_PERSONAL).premium * 2
+
                 const s_taxableIncome = calculateTaxableIncome(s_newComp / years, s_socialInsuranceDeduction / years) * years;
                 const s_incomeTax = calculateIncomeTax(s_taxableIncome / years) * years;
                 const s_residentTax = s_taxableIncome * RESIDENT_TAX_RATE;
@@ -324,18 +350,18 @@
                 }
 
                 // --- Case 2: Growth Property ---
-                const gp_companyRentBurden = (monthlyRent + gpServiceFee - personalBurdenMonthly) * 12 * years;
-                const gp_companyUtilityBurden = utilityCostMonthly * 12 * years;
-                const gp_companyKeyMoneyBurden = totalKeyMoney;
-                let gp_totalCompDeduction;
-                if (years === 1) {
-                    gp_totalCompDeduction = gp_companyRentBurden + gp_companyUtilityBurden + (gp_companyKeyMoneyBurden / 2);
-                } else {
-                    gp_totalCompDeduction = gp_companyRentBurden + gp_companyUtilityBurden + gp_companyKeyMoneyBurden;
-                }
+                const gp_compRent = (monthlyRent - personalBurdenMonthly) * 12 * years;
+                const gp_compServiceFee = gpServiceFee * 12 * years;
+                const gp_compUtility = utilityCostMonthly * 12 * years;
+                const gp_compKeyMoney = (years === 1) ? totalKeyMoney / 2 : totalKeyMoney;
+                const gp_totalCompDeduction = gp_compRent + gp_compServiceFee + gp_compUtility + gp_compKeyMoney;
 
                 const gp_newComp = totalCompensation - gp_totalCompDeduction;
-                const gp_socialInsuranceDeduction = gp_newComp * SOCIAL_INSURANCE_RATE_PERSONAL;
+                const gp_socialResult = calculateAnnualSocialInsurance(gp_newComp, SOCIAL_INSURANCE_RATE_PERSONAL);
+                let gp_socialInsuranceDeduction = gp_socialResult.premium;
+                if(years === 1) gp_socialInsuranceDeduction /= 2;
+                if(years === 2) gp_socialInsuranceDeduction = calculateAnnualSocialInsurance(gp_newComp / 2, SOCIAL_INSURANCE_RATE_PERSONAL).premium * 2
+
                 const gp_taxableIncome = calculateTaxableIncome(gp_newComp / years, gp_socialInsuranceDeduction / years) * years;
                 const gp_incomeTax = calculateIncomeTax(gp_taxableIncome / years) * years;
                 const gp_residentTax = gp_taxableIncome * RESIDENT_TAX_RATE;
@@ -373,7 +399,7 @@
                 updateDetails(`s-income-details-${years}y`, `${formatCurrency(monthlyCompensation)}円 × ${12 * years}ヶ月`);
                 updateDetails(`s-comp-deduction-details-${years}y`, `(${formatCurrency(monthlyRent)}円 - ${formatCurrency(personalBurdenMonthly)}円) × ${12 * years}ヶ月`);
                 updateDetails(`s-new-comp-details-${years}y`, `${formatCurrency(totalCompensation)}円 - ${formatCurrency(s_companyRentBurden)}円`);
-                updateDetails(`s-social-deduction-details-${years}y`, `${formatCurrency(s_newComp)}円 × ${SOCIAL_INSURANCE_RATE_PERSONAL * 100}%`);
+                updateDetails(`s-social-deduction-details-${years}y`, s_socialResult.detail);
                 updateDetails(`s-tax-details-${years}y`, `所得税 ${formatCurrency(s_incomeTax)}円 + 住民税 ${formatCurrency(s_residentTax)}円`);
                 updateDetails(`s-take-home-after-tax-details-${years}y`, `${formatCurrency(s_newComp)}円 - ${formatCurrency(s_socialInsuranceDeduction)}円 - ${formatCurrency(s_totalTax)}円`);
                 updateDetails(`s-rent-burden-details-${years}y`, `${formatCurrency(personalBurdenMonthly)}円 × ${12 * years}ヶ月`);
@@ -382,31 +408,51 @@
                 
                 updateDetails(`gp-income-details-${years}y`, `${formatCurrency(monthlyCompensation)}円 × ${12*years}ヶ月`);
                 document.getElementById(`gp-comp-deduction-details-${years}y`).innerHTML = `
-                    <div class="calc-row"><span>会社負担家賃:</span><span>${formatCurrency(gp_companyRentBurden)}円</span></div>
-                    <div class="calc-row text-xs"><span>(${formatCurrency(monthlyRent)}円 + ${formatCurrency(gpServiceFee)}円 (サービス料) - ${formatCurrency(personalBurdenMonthly)}円) × ${12*years}ヶ月</span></div>
-                    <div class="calc-row"><span>水道光熱費:</span><span>${formatCurrency(gp_companyUtilityBurden)}円</span></div>
-                    <div class="calc-row"><span>礼金(家具家電):</span><span>${formatCurrency(years === 1 ? gp_companyKeyMoneyBurden / 2 : gp_companyKeyMoneyBurden)}円</span></div>
+                    <div class="calc-row"><span>会社負担家賃:</span><span>${formatCurrency(gp_compRent)}円</span></div>
+                    <div class="calc-row text-xs"><span>(${formatCurrency(monthlyRent)}円 - ${formatCurrency(personalBurdenMonthly)}円) × ${12*years}ヶ月</span></div>
+                    <div class="calc-row"><span>弊社サービス料:</span><span>${formatCurrency(gp_compServiceFee)}円</span></div>
+                    <div class="calc-row text-xs"><span>${formatCurrency(gpServiceFee)}円 × ${12*years}ヶ月</span></div>
+                    <div class="calc-row"><span>水道光熱費:</span><span>${formatCurrency(gp_compUtility)}円</span></div>
+                     <div class="calc-row text-xs"><span>${formatCurrency(utilityCostMonthly)}円 × ${12*years}ヶ月</span></div>
+                    <div class="calc-row"><span>礼金(家具家電):</span><span>${formatCurrency(gp_compKeyMoney)}円</span></div>
+                     <div class="calc-row text-xs"><span>新家賃 ${formatCurrency(newTotalMonthlyRent)}円 × ${keyMoneyMonths}ヶ月` + (years === 1 ? ' ÷ 2年' : '') + `</span></div>
                 `;
                 
                 updateDetails(`gp-new-comp-details-${years}y`, `${formatCurrency(totalCompensation)}円 - ${formatCurrency(gp_totalCompDeduction)}円`);
-                updateDetails(`gp-social-deduction-details-${years}y`, `${formatCurrency(gp_newComp)}円 × ${SOCIAL_INSURANCE_RATE_PERSONAL * 100}%`);
+                updateDetails(`gp-social-deduction-details-${years}y`, gp_socialResult.detail);
                 updateDetails(`gp-tax-details-${years}y`, `所得税 ${formatCurrency(gp_incomeTax)}円 + 住民税 ${formatCurrency(gp_residentTax)}円`);
                 updateDetails(`gp-take-home-after-tax-details-${years}y`, `${formatCurrency(gp_newComp)}円 - ${formatCurrency(gp_socialInsuranceDeduction)}円 - ${formatCurrency(gp_totalTax)}円`);
                 updateDetails(`gp-rent-burden-details-${years}y`, `${formatCurrency(personalBurdenMonthly)}円 × ${12 * years}ヶ月`);
             });
 
-            document.getElementById('take-home-difference-1y').textContent = formatCurrency(gp_final_1y - s_final_1y);
-            document.getElementById('take-home-difference-2y').textContent = formatCurrency(gp_final_2y - s_final_2y);
+            document.getElementById('take-home-difference-1y').textContent = formatCurrency(gp_final_1y - s_final_1y) + ' 円';
+            document.getElementById('take-home-difference-2y').textContent = formatCurrency(gp_final_2y - s_final_2y) + ' 円';
             
-            const corporateBenefit = (s_newComp2y * SOCIAL_INSURANCE_RATE_CORPORATE) - (gp_newComp2y * SOCIAL_INSURANCE_RATE_CORPORATE);
-            document.getElementById('corporate-benefit').textContent = formatCurrency(corporateBenefit);
-            updateDetails('corporate-benefit-details', `<strong>通常社宅の法人負担 (2年):</strong> ${formatCurrency(s_newComp2y)}円 × ${SOCIAL_INSURANCE_RATE_CORPORATE * 100}% = ${formatCurrency(s_newComp2y * SOCIAL_INSURANCE_RATE_CORPORATE)}円<br>
-                                                       <strong>弊社プランの法人負担 (2年):</strong> ${formatCurrency(gp_newComp2y)}円 × ${SOCIAL_INSURANCE_RATE_CORPORATE * 100}% = ${formatCurrency(gp_newComp2y * SOCIAL_INSURANCE_RATE_CORPORATE)}円<br>
-                                                       <strong>差額:</strong> ${formatCurrency(corporateBenefit)}円`);
+            // --- Corporate Benefit Calculation ---
+            const s_corpSocialResult = calculateAnnualSocialInsurance(s_newComp2y, SOCIAL_INSURANCE_RATE_CORPORATE);
+            const gp_corpSocialResult = calculateAnnualSocialInsurance(gp_newComp2y, SOCIAL_INSURANCE_RATE_CORPORATE);
+            const socialInsuranceSaving = s_corpSocialResult.premium - gp_corpSocialResult.premium;
+
+            const totalServiceFee2y = gpServiceFee * 24;
+            const newlyExpensedItems = totalKeyMoney + (utilityCostMonthly * 24) + totalServiceFee2y;
+            const corpTaxSavingFromExpenses = newlyExpensedItems * CORPORATE_TAX_RATE;
+            const totalCorporateBenefit = socialInsuranceSaving + corpTaxSavingFromExpenses;
             
-            const totalBenefitFinal = (gp_final_2y - s_final_2y) + corporateBenefit;
+            document.getElementById('corporate-benefit').textContent = formatCurrency(totalCorporateBenefit);
+            updateDetails('corporate-benefit-details', `
+                <strong>社会保険料削減額: ${formatCurrency(socialInsuranceSaving)}円</strong><br>
+                <div class="text-xs pl-2">通常社宅法人負担: ${formatCurrency(s_corpSocialResult.premium)}円 (${s_corpSocialResult.detail})</div>
+                <div class="text-xs pl-2">弊社プラン法人負担: ${formatCurrency(gp_corpSocialResult.premium)}円 (${gp_corpSocialResult.detail})</div>
+                <br>
+                <strong>法人税削減額: ${formatCurrency(corpTaxSavingFromExpenses)}円</strong><br>
+                <div class="calc-row text-xs"><span>(礼金 ${formatCurrency(totalKeyMoney)}円 + 水道光熱費 ${formatCurrency(utilityCostMonthly * 24)}円 + サービス料 ${formatCurrency(totalServiceFee2y)}円) × 税率 ${CORPORATE_TAX_RATE * 100}%</span></div>
+            `);
+            
+            // --- Total Benefit Calculation ---
+            const personalBenefit2y = gp_final_2y - s_final_2y;
+            const totalBenefitFinal = personalBenefit2y + totalCorporateBenefit;
             document.getElementById('total-benefit-final').textContent = formatCurrency(totalBenefitFinal);
-            updateDetails('total-benefit-details', `個人の手取り増加額 (${formatCurrency(gp_final_2y - s_final_2y)}円) + 法人の社会保険料削減額 (${formatCurrency(corporateBenefit)}円)`);
+            updateDetails('total-benefit-details', `個人の手取り増加額 (${formatCurrency(personalBenefit2y)}円) + 法人メリット合計 (${formatCurrency(totalCorporateBenefit)}円)`);
 
             
             resultsSection.classList.add('show');
@@ -422,3 +468,4 @@
 </script>
 </body>
 </html>
+
